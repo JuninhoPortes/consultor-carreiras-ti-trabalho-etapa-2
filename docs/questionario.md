@@ -116,6 +116,43 @@ C) Participar das decisões de produto e também da implementação técnica.
 D) Ainda não tenho uma preferência definida.
 
 
+## Bloco 3 — Perguntas Complementares
+
+As perguntas complementares são apresentadas somente
+quando o sistema não consegue identificar uma carreira
+predominante com as 10 perguntas iniciais.
+
+### Q11 — Preferência entre carreiras
+
+Qual destas áreas mais desperta seu interesse?
+
+As alternativas são geradas dinamicamente, considerando
+as carreiras que possuem evidências nas respostas iniciais.
+
+### Q12 — Atividade profissional específica
+
+Qual atividade você preferiria realizar?
+
+As alternativas são definidas conforme a carreira
+selecionada na Q11, apresentando duas atividades
+representativas daquela especialidade.
+
+## Funcionamento da Análise Complementar
+
+1. O usuário responde às 10 perguntas iniciais.
+2. O motor Experta realiza a análise profissional.
+3. Se houver recomendação, o resultado é apresentado.
+4. Caso contrário, o sistema identifica carreiras candidatas.
+5. O usuário responde às perguntas Q11 e Q12.
+6. A regra R26 verifica a coerência das novas respostas
+   com as evidências coletadas anteriormente.
+7. O sistema apresenta uma nova análise.
+
+As perguntas complementares não substituem as respostas
+originais e não garantem que uma recomendação seja possível.
+
+
+
 ## Observações
 
 - Cada pergunta permite selecionar uma alternativa.
@@ -126,3 +163,4 @@ D) Ainda não tenho uma preferência definida.
 - As perguntas Q06 a Q10 ajudam a diferenciar especialidades semelhantes.
 - Respostas neutras não devem gerar recomendações artificiais.
 - A recomendação final será determinada pela combinação das regras disparadas.
+

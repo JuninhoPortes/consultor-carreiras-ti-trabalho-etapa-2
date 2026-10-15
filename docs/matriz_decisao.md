@@ -391,3 +391,57 @@ A validação completa ocorrerá após a implementação
 do motor de inferência, incluindo casos de empate
 e perfis com interesses profissionais mistos.
 
+
+
+## 14. Extensão da Base de Conhecimento — Regra R26
+
+Durante a validação da interface, foi identificada a
+necessidade de tratar questionários completos que não
+produzem uma recomendação conclusiva.
+
+Para isso, foi implementada uma etapa complementar
+de entrevista utilizando as perguntas Q11 e Q12.
+
+### 14.1. Regra Complementar
+
+| Regra | Condições | Resultado |
+|---|---|---|
+| R26 | Q11 identifica uma carreira candidata, Q12 confirma uma atividade correspondente e existe evidência anterior favorável | Registra evidência complementar para a carreira |
+
+A regra R26 utiliza os recursos MATCH e TEST da Experta
+para verificar a combinação das respostas.
+
+### 14.2. Pontuação Complementar
+
+Quando a análise inicial não produz uma recomendação
+e a regra R26 é acionada, são considerados:
+
+- Q11: +3 pontos pela preferência profissional.
+- Q12: +1 ponto pela atividade específica.
+- Evidências anteriores: pontuação já calculada.
+
+A recomendação complementar utiliza a pontuação
+original da carreira, acrescida de 4 pontos.
+
+### 14.3. Critérios de Segurança da Recomendação
+
+- A regra R26 exige evidência anterior favorável.
+- A escolha da carreira não pode ser completamente
+  desconectada do questionário inicial.
+- A análise complementar não modifica as regras R01-R25.
+- A pontuação não representa probabilidade estatística.
+- Caso não existam evidências suficientes, o sistema
+  poderá permanecer sem recomendação.
+
+### 14.4. Validação
+
+Foram implementados testes automatizados para:
+
+1. Identificação das carreiras candidatas.
+2. Recomendação utilizando Q11, Q12 e R26.
+3. Ausência de recomendação sem confirmação complementar.
+
+A base de conhecimento passa a contar com 26 regras,
+sendo 20 de identificação profissional, 5 de
+diferenciação e 1 de confirmação complementar.
+

@@ -9,6 +9,38 @@ from experta import KnowledgeEngine, Rule, OR
 from src.fatos import RespostaUsuario, EvidenciaCarreira
 from src.pontuacao import calcular_pontuacoes
 from src.recomendacao import selecionar_carreira
+from experta import KnowledgeEngine, Rule, OR, MATCH, TEST
+
+from src.pontuacao import (
+    SINAIS_PRINCIPAIS,
+    SINAIS_COMPLEMENTARES,
+)
+from src.complementares import ATIVIDADES_COMPLEMENTARES
+
+
+def possui_evidencia_complementar(
+    escolha, atividade, pergunta_origem, alternativa_origem
+):
+    """Confirma a nova preferência com uma evidência anterior."""
+
+    chave = (pergunta_origem, alternativa_origem)
+
+    evidencia_principal = (
+        SINAIS_PRINCIPAIS.get(chave) == escolha
+    )
+
+    evidencia_secundaria = (
+        escolha in SINAIS_COMPLEMENTARES.get(chave, ())
+    )
+
+    return (
+        atividade in ("A", "B")
+        and pergunta_origem in {
+            f"Q{i:02d}" for i in range(1, 11)
+        }
+        and (evidencia_principal or evidencia_secundaria)
+    )
+
 
 class MotorInferencia(KnowledgeEngine):
     """Gerencia os fatos e executa as regras de inferência."""
@@ -541,6 +573,41 @@ class MotorInferencia(KnowledgeEngine):
         )
 
 
+    # R26 — Confirmação complementar de afinidade profissional
+    @Rule(
+        RespostaUsuario(
+            pergunta="Q11", alternativa=MATCH.escolha
+        ),
+        RespostaUsuario(
+            pergunta="Q12", alternativa=MATCH.atividade
+        ),
+        RespostaUsuario(
+            pergunta=MATCH.pergunta_origem,
+            alternativa=MATCH.alternativa_origem
+        ),
+        TEST(possui_evidencia_complementar)
+    )
+    def regra_r26_complementar(
+        self, escolha, atividade, pergunta_origem, alternativa_origem
+    ):
+        """Confirma afinidade por meio de respostas complementares."""
+
+        indice = 0 if atividade == "A" else 1
+        tarefa = ATIVIDADES_COMPLEMENTARES[escolha][indice]
+
+        self.declare(
+            EvidenciaCarreira(
+                carreira=escolha,
+                regra="R26",
+                justificativa=(
+                    f"O usuário confirmou interesse em {tarefa.lower()}, "
+                    "reforçando uma afinidade identificada "
+                    "anteriormente no questionário."
+                )
+            )
+        )
+
+
     
     def analisar(self, respostas: dict[str, str]) -> dict[str, int]:
         """Executa as regras e retorna as pontuações elegíveis."""
@@ -591,6 +658,26 @@ class MotorInferencia(KnowledgeEngine):
 
         # Seleciona a carreira considerando os desempates.
         carreira = selecionar_carreira(pontuacoes, respostas)
+        
+        pontuacao_complementar = None
+
+        if carreira is None:
+            evidencias_complementares = [
+                fato
+                for fato in self.facts.values()
+                if isinstance(fato, EvidenciaCarreira)
+                and fato["regra"] == "R26"
+            ]
+
+            if evidencias_complementares:
+                carreira = respostas["Q11"]
+
+                # Q11 é um novo sinal principal (+3).
+                # Q12 é um sinal complementar (+1).
+                pontuacao_complementar = (
+                    calcular_pontuacoes(respostas)[carreira] + 4
+                )
+
 
         # Verifica se foi possível definir uma carreira.
         if carreira is None:
@@ -620,9 +707,18 @@ class MotorInferencia(KnowledgeEngine):
 
         return {
             "carreira": carreira,
-            "pontuacao": pontuacoes[carreira],
+            "pontuacao": (
+    pontuacao_complementar
+    if pontuacao_complementar is not None
+    else pontuacoes[carreira]
+),
             "justificativas": justificativas,
-            "mensagem": "Recomendação realizada com sucesso."
+            "mensagem": (
+    "Não foi possível identificar uma carreira predominante "
+    "com segurança. Suas respostas podem indicar interesses "
+    "em diferentes áreas ou evidências insuficientes. "
+    "Responda às perguntas complementares para refinar a análise."
+)
         }
 
 
