@@ -1,0 +1,1 @@
+"""Pacote principal do sistema especialista de carreiras em TI."""
