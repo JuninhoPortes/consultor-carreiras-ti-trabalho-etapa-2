@@ -118,3 +118,29 @@ A implementação deverá possuir testes que verifiquem:
 Esta modelagem constitui a proposta inicial da nova base de conhecimento.
 
 Os pesos, as regras específicas, os níveis de proficiência e os conteúdos dos roadmaps serão definidos e validados durante as etapas seguintes do desenvolvimento, conforme os requisitos do trabalho acadêmico.
+
+
+## 10. Implementação do Motor Ponderado
+
+A implementação do mecanismo de compatibilidade foi
+realizada no módulo `src/motor_ponderado.py`.
+
+O motor utiliza os pesos, regras e critérios de diagnóstico
+definidos em `dados/regras_carreiras.json`.
+
+Foram implementados:
+
+- Cálculo percentual ponderado.
+- Avaliação das regras de bônus e penalidades.
+- Ranking completo das dez carreiras.
+- Seleção das três carreiras mais compatíveis.
+- Justificativas das regras acionadas.
+- Diagnóstico de perfis predominantes, multifacetados
+  e inconclusivos.
+
+Os critérios de diagnóstico utilizam uma compatibilidade
+mínima de 55% e uma margem de 10 pontos percentuais
+entre as duas primeiras carreiras.
+
+A documentação técnica detalhada está disponível em
+`docs/motor_ponderado.md`.
