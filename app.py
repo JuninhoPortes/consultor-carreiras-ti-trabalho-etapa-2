@@ -1,438 +1,828 @@
 
-"""Interface web do Consultor Inteligente de Carreiras em TI."""
+"""Interface avançada do Consultor de Carreiras em TI."""
+
+from pathlib import Path
 
 import streamlit as st
 
-from src.motor_inferencia import MotorInferencia
-from pathlib import Path
-from src.complementares import (
-    ATIVIDADES_COMPLEMENTARES,
-    obter_candidatas,
-)
+from src.base_conhecimento import carregar_base_conhecimento
+from src.motor_ponderado import MotorPonderado
+from src.roadmap import GeradorRoadmap
 
+# ============================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================================
 
 st.set_page_config(
-    page_title="Consultor Inteligente de Carreiras",
-    page_icon=None,
-    layout="centered"
+    page_title="Consultor Inteligente de Carreiras em TI",
+    page_icon="👑",
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
+# ============================================================
+# IDENTIDADE VISUAL
+# ============================================================
 
-# Questionário definido durante a engenharia de conhecimento.
-PERGUNTAS = {
-    "Q01": (
-        "Qual é seu nível de afinidade com matemática e estatística?",
-        {"A": "Baixo", "B": "Médio", "C": "Alto"}
-    ),
-    "Q02": (
-        "Qual atividade você gostaria de realizar no dia a dia?",
-        {
-            "A": "Desenvolver algoritmos e funcionalidades",
-            "B": "Criar interfaces e experiências visuais",
-            "C": "Analisar dados e identificar padrões",
-            "D": "Organizar e transformar grandes volumes de dados",
-            "E": "Configurar servidores e automatizar processos",
-            "F": "Investigar falhas, vulnerabilidades e riscos",
-            "G": "Planejar funcionalidades e prioridades de produtos"
-        }
-    ),
-    "Q03": (
-        "Com qual tecnologia você possui maior familiaridade?",
-        {
-            "A": "Python",
-            "B": "JavaScript, HTML e CSS",
-            "C": "Java ou C#",
-            "D": "SQL e bancos de dados",
-            "E": "Linux e redes",
-            "F": "Docker e ferramentas de CI/CD",
-            "G": "AWS, Azure ou Google Cloud",
-            "H": "Flutter, React Native ou desenvolvimento mobile",
-            "I": "Ferramentas de testes e automação",
-            "J": "Nenhuma — estou começando"
-        }
-    ),
-    "Q04": (
-        "Qual resultado profissional você considera mais interessante?",
-        {
-            "A": "Desenvolver soluções utilizadas pelas pessoas",
-            "B": "Proporcionar experiências visuais intuitivas",
-            "C": "Transformar dados em informações úteis",
-            "D": "Garantir infraestrutura estável e escalável",
-            "E": "Proteger sistemas e garantir sua qualidade",
-            "F": "Contribuir para decisões e resultados de negócio"
-        }
-    ),
-    "Q05": (
-        "Em qual ambiente você gostaria de trabalhar?",
-        {
-            "A": "Aplicações web e APIs",
-            "B": "Interfaces e aplicações móveis",
-            "C": "Plataformas e ambientes de dados",
-            "D": "Servidores, redes e infraestrutura em nuvem",
-            "E": "Qualidade, segurança e automação",
-            "F": "Planejamento e gestão de produtos"
-        }
-    ),
-    "Q06": (
-        "Se fosse trabalhar com dados, qual atividade preferiria?",
-        {
-            "A": "Analisar padrões e criar modelos preditivos",
-            "B": "Construir processos de coleta e transformação de dados",
-            "C": "Não tenho preferência"
-        }
-    ),
-    "Q07": (
-        "Qual atividade de infraestrutura desperta mais interesse?",
-        {
-            "A": "Automatizar implantações e monitorar aplicações",
-            "B": "Projetar ambientes e arquiteturas em nuvem",
-            "C": "Não tenho preferência"
-        }
-    ),
-    "Q08": (
-        "Qual tipo de desenvolvimento considera mais interessante?",
-        {
-            "A": "Implementar APIs e regras de negócio",
-            "B": "Criar interfaces web intuitivas",
-            "C": "Desenvolver aplicativos para smartphones e tablets",
-            "D": "Não tenho preferência"
-        }
-    ),
-    "Q09": (
-        "Qual atividade você considera mais interessante?",
-        {
-            "A": "Investigar vulnerabilidades e proteger sistemas",
-            "B": "Identificar defeitos e automatizar testes",
-            "C": "Não tenho preferência"
-        }
-    ),
-    "Q10": (
-        "Qual responsabilidade preferiria assumir em um projeto?",
-        {
-            "A": "Definir prioridades e orientar o produto",
-            "B": "Implementar soluções técnicas",
-            "C": "Participar das decisões e da implementação",
-            "D": "Ainda não tenho preferência"
-        }
-    )
-}
+CAMINHO_CSS = (
+    Path(__file__).resolve().parent
+    / "assets"
+    / "estilo.css"
+)
 
-
-
-# Carrega os estilos personalizados.
-caminho_css = Path(__file__).parent / "assets" / "estilo.css"
-
-with open(caminho_css, encoding="utf-8") as arquivo:
+if CAMINHO_CSS.exists():
     st.markdown(
-        f"<style>{arquivo.read()}</style>",
+        f"<style>{CAMINHO_CSS.read_text(encoding='utf-8')}</style>",
         unsafe_allow_html=True
     )
 
+# ============================================================
+# BASE DE CONHECIMENTO
+# ============================================================
 
+base = carregar_base_conhecimento()
 
-def limpar_feedback():
-    """Remove avisos e resultados antigos quando uma resposta muda."""
-    st.session_state.pop("aviso_pendencias", None)
-    st.session_state.pop("resultado", None)
-    st.session_state.pop("Q11", None)
-    st.session_state.pop("Q12", None)
+# ============================================================
+# ARMAZENAMENTO DAS RESPOSTAS
+# ============================================================
 
+if "perfil_pessoal" not in st.session_state:
+    st.session_state["perfil_pessoal"] = {
+        "situacao": None,
+        "experiencia": None
+    }
 
-def limpar_formulario():
-    """Limpa todas as respostas e informações da análise."""
-    for codigo in PERGUNTAS:
-        st.session_state.pop(codigo, None)
+if "afinidades" not in st.session_state:
+    st.session_state["afinidades"] = {
+        dimensao: 3
+        for dimensao in base["dimensoes"]
+    }
 
-    limpar_feedback()
+if "objetivos_carreira" not in st.session_state:
+    st.session_state["objetivos_carreira"] = {
+        "principal": None,
+        "foco": None
+    }
 
+def salvar_perfil(campo):
+    """Preserva as informações pessoais entre as etapas."""
 
-def limpar_confirmacao():
-    """Reinicia a atividade ao trocar a carreira complementar."""
-    st.session_state.pop("Q12", None)
-
-
-# Cabeçalho principal.
-st.markdown(
-    """
-    <div class="hero">
-        <div class="hero-tag">SISTEMA ESPECIALISTA EM TI</div>
-        <h1>Descubra seu caminho na <span>tecnologia.</span></h1>
-        <p>
-            Explore suas afinidades, habilidades e interesses
-            profissionais. Nosso sistema especialista analisa
-            suas respostas para recomendar uma das 10 trilhas
-            de carreira em Tecnologia da Informação.
-        </p>
-        <div class="hero-footer">
-            ✦ 10 perguntas &nbsp; • &nbsp;
-            10 carreiras &nbsp; • &nbsp;
-            Recomendação personalizada
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.info(
-    "Responda com base nas suas preferências pessoais. "
-    "Não existem respostas certas ou erradas."
-)
-
-
-# Questionário interativo.
-with st.container(key="questionario", border=False):
-
-    st.subheader("01 — Seu perfil profissional")
-    st.caption(
-        "Conte um pouco sobre suas afinidades e conhecimentos."
+    st.session_state["perfil_pessoal"][campo] = (
+        st.session_state[f"_perfil_{campo}"]
     )
 
-    for codigo in list(PERGUNTAS.keys())[:5]:
-        pergunta, alternativas = PERGUNTAS[codigo]
+def salvar_afinidade(dimensao):
+    """Preserva a afinidade e invalida análises anteriores."""
 
-        st.selectbox(
-            f"{codigo} — {pergunta}",
-            options=list(alternativas.keys()),
-            format_func=lambda opcao, a=alternativas: (
-                f"{opcao}) {a[opcao]}"
-            ),
-            index=None,
-            placeholder="Selecione uma alternativa",
-            key=codigo,
-            on_change=limpar_feedback
-        )
-
-    st.divider()
-
-    st.subheader("02 — Suas especialidades")
-    st.caption(
-        "Identifique as áreas e atividades que mais despertam interesse."
+    st.session_state["afinidades"][dimensao] = (
+        st.session_state[f"_afinidade_{dimensao}"]
     )
 
-    for codigo in list(PERGUNTAS.keys())[5:]:
-        pergunta, alternativas = PERGUNTAS[codigo]
+    st.session_state.pop("resultado_ponderado", None)
+    st.session_state.pop("carreira_roadmap", None)
+    st.session_state["conhecimentos_roadmap"] = {}
+    st.session_state.pop("resultado_roadmap", None)
 
-        st.selectbox(
-            f"{codigo} — {pergunta}",
-            options=list(alternativas.keys()),
-            format_func=lambda opcao, a=alternativas: (
-                f"{opcao}) {a[opcao]}"
-            ),
-            index=None,
-            placeholder="Selecione uma alternativa",
-            key=codigo,
-            on_change=limpar_feedback
-        )
+def salvar_objetivo(campo):
+    """Preserva os objetivos e atualiza o estado da análise."""
 
-    st.divider()
-
-    enviar = st.button(
-        "Descobrir minha carreira",
-        type="primary",
-        use_container_width=True,
-        key="botao_descobrir"
+    st.session_state["objetivos_carreira"][campo] = (
+        st.session_state[f"_objetivo_{campo}"]
     )
 
-    # Processamento das respostas.
-    if enviar:
-        respostas = {
-            codigo: st.session_state.get(codigo)
-            for codigo in PERGUNTAS
-        }
+    st.session_state.pop("resultado_ponderado", None)
+    st.session_state.pop("carreira_roadmap", None)
+    st.session_state["conhecimentos_roadmap"] = {}
+    st.session_state.pop("resultado_roadmap", None)
 
-        faltantes = [
-            codigo
-            for codigo, resposta in respostas.items()
-            if resposta is None
-        ]
+def mudar_carreira_roadmap():
+    """Limpa conhecimentos ao escolher outra carreira."""
 
-        if faltantes:
-            st.session_state.pop("resultado", None)
+    st.session_state["conhecimentos_roadmap"] = {}
+    st.session_state.pop("resultado_roadmap", None)
 
-            st.session_state["aviso_pendencias"] = (
-                "Responda todas as perguntas: "
-                + ", ".join(faltantes)
-            )
+def salvar_conhecimento(competencia_id):
+    """Preserva os níveis de conhecimento informados."""
 
-        else:
-            st.session_state.pop("aviso_pendencias", None)
+    chave = f"_conhecimento_{competencia_id}"
 
-            motor = MotorInferencia()
+    if "conhecimentos_roadmap" not in st.session_state:
+        st.session_state["conhecimentos_roadmap"] = {}
 
-            st.session_state["resultado"] = (
-                 motor.gerar_resultado(respostas)
-            )
+    st.session_state["conhecimentos_roadmap"][competencia_id] = (
+        st.session_state[chave]
+    )
 
-    # Solicita a rolagem automática após gerar o resultado.
+    # Uma alteração exige gerar novamente o roadmap.
+    st.session_state.pop("resultado_roadmap", None)
+
+def analisar_perfil():
+    """Executa a análise de compatibilidade profissional."""
+
+    objetivos = st.session_state["objetivos_carreira"]
+
+    if not all(objetivos.values()):
+        return
+
+    motor = MotorPonderado()
+
+    respostas = st.session_state["afinidades"].copy()
+
+    resultado = motor.analisar(respostas)
+
+    st.session_state["resultado_ponderado"] = resultado
+
+    # Reinicia a avaliação de competências para a nova análise.
+    st.session_state.pop("carreira_roadmap", None)
+    st.session_state["conhecimentos_roadmap"] = {}
+    st.session_state.pop("resultado_roadmap", None)
+
+    # Solicita rolagem automática até a recomendação.
     st.session_state["rolar_para_resultado"] = True
 
-    # Exibe o aviso somente enquanto não houver correção.
-    if st.session_state.get("aviso_pendencias"):
-        st.warning(st.session_state["aviso_pendencias"])
+def gerar_roadmap():
+    """Gera o plano apenas quando todas as competências foram respondidas."""
+
+    carreira_id = st.session_state.get("carreira_roadmap")
+    resultado = st.session_state.get("resultado_ponderado")
+    conhecimentos = st.session_state.get("conhecimentos_roadmap", {})
+
+    if not resultado or carreira_id not in {
+        item["id"] for item in resultado["top_3"]
+    }:
+        return
+
+    requisitos = base["requisitos_junior"][carreira_id]
+
+    if not all(
+        conhecimentos.get(competencia_id) is not None
+        for competencia_id in requisitos
+    ):
+        return
+
+    st.session_state["resultado_roadmap"] = GeradorRoadmap().gerar(
+        carreira_id,
+        {competencia_id: conhecimentos[competencia_id]
+         for competencia_id in requisitos}
+    )
+    st.session_state["rolar_para_roadmap"] = True
 
 
+# ============================================================
+# CONFIGURAÇÃO DAS ETAPAS
+# ============================================================
 
-# Apresentação da recomendação.
-if "resultado" in st.session_state:
+ETAPAS = [
+    "Perfil pessoal",
+    "Afinidades técnicas",
+    "Objetivos de carreira"
+]
 
-    resultado = st.session_state["resultado"]
+if "etapa_atual" not in st.session_state:
+    st.session_state["etapa_atual"] = 0
 
-    # Ponto de destino da rolagem automática.
-    st.markdown(
-        '<div id="resultado-carreira"></div>',
-        unsafe_allow_html=True
+def mudar_etapa(deslocamento):
+    """Avança ou retorna entre as etapas disponíveis."""
+
+    atual = st.session_state["etapa_atual"]
+    nova = atual + deslocamento
+
+    st.session_state["etapa_atual"] = max(
+        0,
+        min(nova, len(ETAPAS) - 1)
     )
 
-    st.divider()
+def reiniciar_navegacao():
+    """Retorna à primeira etapa."""
 
+    st.session_state["etapa_atual"] = 0
 
-    st.markdown(
-        '<div class="resultado-titulo">'
-        'ANÁLISE PROFISSIONAL'
-        '</div>',
-        unsafe_allow_html=True
-    )
+# ============================================================
+# CABEÇALHO
+# ============================================================
 
-    st.header("Sua recomendação")
-
-    
-    if resultado["carreira"] is None:
-
-        st.markdown(
-            f'<div class="aviso-complementar">'
-            f'{resultado["mensagem"]}'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-
-        respostas_atuais = {
-            codigo: st.session_state.get(codigo)
-            for codigo in PERGUNTAS
-        }
-
-        candidatas = obter_candidatas(respostas_atuais)
-
-        if candidatas:
-            with st.container(
-                key="perguntas_complementares",
-                border=False
-            ):
-                st.subheader("Vamos conhecer melhor seu perfil")
-                st.caption(
-                    "Identificamos afinidades que merecem uma análise "
-                    "mais específica. Responda às duas perguntas abaixo."
-                )
-
-                st.selectbox(
-                    "Q11 — Qual destas áreas mais desperta seu interesse?",
-                    options=candidatas,
-                    index=None,
-                    placeholder="Selecione uma área",
-                    key="Q11",
-                    on_change=limpar_confirmacao
-                )
-
-                carreira_escolhida = st.session_state.get("Q11")
-
-                if carreira_escolhida:
-                    atividades = ATIVIDADES_COMPLEMENTARES[
-                        carreira_escolhida
-                    ]
-
-                    st.selectbox(
-                        "Q12 — Qual atividade você preferiria realizar?",
-                        options=["A", "B"],
-                        format_func=lambda opcao: (
-                            atividades[0]
-                            if opcao == "A"
-                            else atividades[1]
-                        ),
-                        index=None,
-                        placeholder="Selecione uma atividade",
-                        key="Q12"
-                    )
-
-                if st.button(
-                    "Confirmar minha afinidade",
-                    type="primary",
-                    use_container_width=True,
-                    key="botao_complementar"
-                ):
-                    escolha = st.session_state.get("Q11")
-                    atividade = st.session_state.get("Q12")
-
-                    if not escolha or not atividade:
-                        st.warning(
-                            "Responda às duas perguntas complementares."
-                        )
-                    else:
-                        respostas_completas = {
-                            **respostas_atuais,
-                            "Q11": escolha,
-                            "Q12": atividade
-                        }
-
-                        motor = MotorInferencia()
-
-                        st.session_state["resultado"] = (
-                            motor.gerar_resultado(respostas_completas)
-                        )
-
-                        st.session_state[
-                            "rolar_para_resultado"
-                        ] = True
-
-                        st.rerun()
-
-        else:
-            st.info(
-                "Ainda não identificamos evidências suficientes "
-                "para selecionar áreas de investigação. "
-                "Revise suas preferências no questionário inicial."
-            )
-
-
-    else:
-        st.markdown(
+st.markdown(
     """
-    <div class="sucesso-banner">
-        Perfil analisado com sucesso!
+    <div style="text-align: center;">
+        <h1>👑 Consultor Inteligente de Carreiras</h1>
+        <p>
+            Descubra suas afinidades profissionais e construa
+            seu plano de desenvolvimento em Tecnologia da Informação.
+        </p>
     </div>
     """,
     unsafe_allow_html=True
 )
 
-        st.subheader(f"♛ {resultado['carreira']}")
+# ============================================================
+# INDICADOR DE PROGRESSO
+# ============================================================
 
-        st.metric(
-            "Pontuação de compatibilidade",
-            resultado["pontuacao"]
-        )
+etapa = st.session_state["etapa_atual"]
 
-        st.caption(
-            "A pontuação indica evidências de afinidade "
-            "e não representa uma probabilidade de sucesso."
-        )
-
-        st.markdown("### Por que essa carreira?")
-
-        for item in resultado["justificativas"]:
-            with st.expander(
-                f"Regra {item['regra']}",
-                expanded=False
-            ):
-                st.write(item["motivo"])
-
-    st.button(
-    "Refazer questionário",
-    on_click=limpar_formulario,
-    use_container_width=True,
-    key="botao_refazer"
+st.progress(
+    (etapa + 1) / len(ETAPAS)
 )
 
+st.caption(
+    f"Etapa {etapa + 1} de {len(ETAPAS)} — {ETAPAS[etapa]}"
+)
 
-    # Rola suavemente até o resultado após a análise.
+st.divider()
+
+# ============================================================
+# CONTEÚDO DAS ETAPAS
+# ============================================================
+
+if etapa == 0:
+
+    # --------------------------------------------------------
+    # ETAPA 1 — PERFIL PESSOAL
+    # --------------------------------------------------------
+
+    st.subheader("Seu perfil profissional")
+
+    st.write(
+        "Antes de analisar suas afinidades, queremos conhecer "
+        "um pouco sobre sua experiência com tecnologia."
+    )
+
+    perfil = st.session_state["perfil_pessoal"]
+
+    st.session_state["_perfil_situacao"] = perfil["situacao"]
+
+    st.selectbox(
+        "Qual é sua situação profissional atual?",
+        options=[
+            "Estudante de Tecnologia da Informação",
+            "Iniciante na área de tecnologia",
+            "Profissional de Tecnologia da Informação",
+            "Profissional em transição de carreira"
+        ],
+        index=None,
+        placeholder="Selecione sua situação atual",
+        key="_perfil_situacao",
+        on_change=salvar_perfil,
+        args=("situacao",)
+    )
+
+    st.session_state["_perfil_experiencia"] = perfil["experiencia"]
+
+    st.selectbox(
+        "Qual é seu nível de experiência com tecnologia?",
+        options=[
+            "Nenhuma experiência",
+            "Menos de 1 ano",
+            "Entre 1 e 3 anos",
+            "Mais de 3 anos"
+        ],
+        index=None,
+        placeholder="Selecione sua experiência",
+        key="_perfil_experiencia",
+        on_change=salvar_perfil,
+        args=("experiencia",)
+    )
+
+    st.caption(
+        "Essas informações contextualizam seu perfil, "
+        "mas não modificam os pesos do cálculo de compatibilidade."
+    )
+
+elif etapa == 1:
+
+    # --------------------------------------------------------
+    # ETAPA 2 — AFINIDADES TÉCNICAS
+    # --------------------------------------------------------
+
+    st.subheader("Suas afinidades técnicas")
+
+    st.write(
+        "Avalie seu nível de interesse por cada área da "
+        "Tecnologia da Informação utilizando a escala de 1 a 5."
+    )
+
+    st.caption(
+        "1 = Nenhuma afinidade | "
+        "3 = Afinidade moderada | "
+        "5 = Afinidade muito alta"
+    )
+
+    for pergunta in base["perguntas_afinidade"]:
+
+        dimensao = pergunta["dimensao"]
+        chave = f"_afinidade_{dimensao}"
+
+        # Recupera a resposta armazenada.
+        st.session_state[chave] = (
+            st.session_state["afinidades"][dimensao]
+        )
+
+        st.slider(
+            label=pergunta["texto"],
+            min_value=1,
+            max_value=5,
+            step=1,
+            key=chave,
+            on_change=salvar_afinidade,
+            args=(dimensao,)
+        )
+
+    st.info(
+        "Todas as afinidades começam no nível 3 (moderado). "
+        "Ajuste cada valor conforme suas preferências."
+    )
+
+elif etapa == 2:
+
+    # --------------------------------------------------------
+    # ETAPA 3 — OBJETIVOS DE CARREIRA
+    # --------------------------------------------------------
+
+    st.subheader("Seus objetivos de carreira")
+
+    st.write(
+        "Estamos quase terminando! Agora queremos compreender "
+        "seus objetivos profissionais para contextualizar "
+        "as recomendações e seu futuro plano de desenvolvimento."
+    )
+
+    objetivos = st.session_state["objetivos_carreira"]
+
+    # --------------------------------------------------------
+    # OBJETIVO PRINCIPAL
+    # --------------------------------------------------------
+
+    st.session_state["_objetivo_principal"] = (
+        objetivos["principal"]
+    )
+
+    st.selectbox(
+        "Qual é seu principal objetivo profissional?",
+        options=[
+            "Descobrir uma carreira compatível com meu perfil",
+            "Conseguir minha primeira oportunidade em TI",
+            "Migrar para outra especialidade de tecnologia",
+            "Evoluir profissionalmente na área em que atuo"
+        ],
+        index=None,
+        placeholder="Selecione seu objetivo principal",
+        key="_objetivo_principal",
+        on_change=salvar_objetivo,
+        args=("principal",)
+    )
+
+    # --------------------------------------------------------
+    # FOCO DE DESENVOLVIMENTO
+    # --------------------------------------------------------
+
+    st.session_state["_objetivo_foco"] = (
+        objetivos["foco"]
+    )
+
+    st.selectbox(
+        "O que você deseja priorizar no seu desenvolvimento?",
+        options=[
+            "Aprender novas tecnologias e competências",
+            "Desenvolver projetos para meu portfólio",
+            "Preparar-me para certificações profissionais",
+            "Combinar estudos, projetos e certificações"
+        ],
+        index=None,
+        placeholder="Selecione sua prioridade",
+        key="_objetivo_foco",
+        on_change=salvar_objetivo,
+        args=("foco",)
+    )
+
+    st.caption(
+        "Essas informações ajudam a contextualizar sua "
+        "orientação profissional. A compatibilidade percentual "
+        "continua sendo calculada pelas afinidades e regras "
+        "ponderadas da base de conhecimento."
+    )
+
+    if all(objetivos.values()):
+        st.success(
+            "Objetivos registrados! Seu questionário está "
+            "preparado para a análise de compatibilidade."
+        )
+
+# ============================================================
+# NAVEGAÇÃO
+# ============================================================
+
+st.divider()
+
+if etapa == 0:
+
+    # Centraliza o botão Continuar na primeira etapa.
+    _, coluna_central, _ = st.columns([1, 2, 1])
+
+    with coluna_central:
+        st.button(
+            "Continuar",
+            on_click=mudar_etapa,
+            args=(1,),
+            use_container_width=True,
+            key="wizard_proximo",
+            disabled=not all(
+                st.session_state["perfil_pessoal"].values()
+            )
+        )
+
+else:
+
+    # Nas demais etapas, distribui os botões igualmente.
+    coluna_voltar, coluna_avancar = st.columns(2)
+
+    with coluna_voltar:
+        st.button(
+            "Voltar",
+            on_click=mudar_etapa,
+            args=(-1,),
+            use_container_width=True,
+            key="wizard_voltar"
+        )
+
+    with coluna_avancar:
+
+        if etapa < len(ETAPAS) - 1:
+            st.button(
+                "Continuar",
+                on_click=mudar_etapa,
+                args=(1,),
+                use_container_width=True,
+                key="wizard_proximo"
+            )
+
+        else:
+            st.button(
+                "Analisar meu perfil",
+                on_click=analisar_perfil,
+                use_container_width=True,
+                key="wizard_analisar",
+                disabled=not all(
+                    st.session_state["objetivos_carreira"].values()
+                )
+            )
+
+# ============================================================
+# RESULTADO DA ANÁLISE PROFISSIONAL
+# ============================================================
+
+if etapa == 2 and "resultado_ponderado" in st.session_state:
+
+    resultado = st.session_state["resultado_ponderado"]
+    diagnostico = resultado["diagnostico"]
+
+    st.divider()
+
+    # Destino da rolagem automática.
+    st.markdown(
+        '<div id="resultado-ponderado"></div>',
+        unsafe_allow_html=True
+    )
+
+    st.subheader("Sua análise profissional")
+
+    classificacoes = {
+        "predominante": "Perfil predominante",
+        "multifacetado": "Perfil multifacetado",
+        "inconclusivo": "Perfil inconclusivo"
+    }
+
+    classificacao = diagnostico["classificacao"]
+
+    st.markdown(
+        f"**Classificação:** "
+        f"{classificacoes[classificacao]}"
+    )
+
+    if classificacao == "inconclusivo":
+        st.warning(diagnostico["mensagem"])
+    else:
+        st.info(diagnostico["mensagem"])
+
+    # --------------------------------------------------------
+    # TOP 3 DE CARREIRAS
+    # --------------------------------------------------------
+
+    st.markdown("### Top 3 — Carreiras mais compatíveis")
+
+    for posicao, carreira in enumerate(
+        resultado["top_3"],
+        start=1
+    ):
+
+        percentual = carreira["compatibilidade_percentual"]
+
+        st.markdown(
+            f"**{posicao}º — {carreira['carreira']}**"
+        )
+
+        st.metric(
+            label="Compatibilidade",
+            value=f"{percentual:.2f}%"
+        )
+
+        st.progress(percentual / 100)
+
+        st.caption(
+            f"Compatibilidade-base: "
+            f"{carreira['pontuacao_base']:.2f}% | "
+            f"Ajustes das regras: "
+            f"{carreira['ajuste_total']:+.2f} p.p."
+        )
+
+        regras = carreira["regras_acionadas"]
+
+        if regras:
+
+            with st.expander(
+                f"Ver justificativas — {carreira['carreira']}"
+            ):
+
+                for regra in regras:
+
+                    tipo = (
+                        "Bônus"
+                        if regra["tipo"] == "bonus"
+                        else "Penalidade"
+                    )
+
+                    st.markdown(
+                        f"**{regra['regra']} — {tipo} "
+                        f"({regra['ajuste_percentual']:+.0f} p.p.)**"
+                    )
+
+                    st.write(regra["justificativa"])
+
+        else:
+            st.caption(
+                "Nenhuma regra adicional foi acionada. "
+                "A compatibilidade foi determinada "
+                "pelos pesos das afinidades."
+            )
+
+        st.divider()
+
+    # --------------------------------------------------------
+    # GRÁFICO COMPARATIVO DAS DEZ CARREIRAS
+    # --------------------------------------------------------
+
+    st.markdown("### Comparativo geral de carreiras")
+
+    st.write(
+        "Visualize sua compatibilidade com todas as dez "
+        "trilhas profissionais avaliadas pelo sistema."
+    )
+
+    # Nomes resumidos apenas para melhorar a leitura do gráfico.
+    nomes_grafico = {
+        "backend": "Back-end",
+        "frontend": "Front-end & UI/UX",
+        "ciencia_dados": "Ciência de Dados/ML",
+        "engenharia_dados": "Eng. de Dados",
+        "ciberseguranca": "Cibersegurança",
+        "devops": "DevOps & SRE",
+        "cloud": "Cloud",
+        "mobile": "Mobile",
+        "qa": "Qualidade (QA)",
+        "produto": "Gestão de Produtos"
+    }
+
+    dados_grafico = [
+        {
+            "Carreira": nomes_grafico.get(
+                carreira["id"],
+                carreira["carreira"]
+            ),
+            "Compatibilidade (%)": carreira[
+                "compatibilidade_percentual"
+            ]
+        }
+        for carreira in resultado["ranking"]
+    ]
+
+    st.bar_chart(
+        dados_grafico,
+        x="Carreira",
+        y="Compatibilidade (%)",
+        horizontal=True,
+        sort=False,
+        color="#37E8FF",
+        height=480
+    )
+
+    st.markdown(
+        """
+        <p style="
+            text-align: center;
+            color: #8d9ba9;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            line-height: 1.5;
+        ">
+            Os percentuais representam compatibilidade com os
+            critérios do sistema, não probabilidades de
+            sucesso profissional.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # --------------------------------------------------------
+    # SELEÇÃO DA CARREIRA E AVALIAÇÃO DE COMPETÊNCIAS
+    # --------------------------------------------------------
+
+    st.divider()
+    st.subheader("Seu desenvolvimento profissional")
+
+    st.write(
+        "Selecione uma das três carreiras recomendadas e avalie "
+        "seus conhecimentos atuais. Com essas informações, "
+        "poderemos identificar suas lacunas de competências "
+        "e construir um plano de desenvolvimento personalizado."
+    )
+
+    carreiras_disponiveis = {
+        carreira["id"]: carreira["carreira"]
+        for carreira in resultado["top_3"]
+    }
+
+    carreira_escolhida = st.selectbox(
+        "Qual carreira você deseja explorar?",
+        options=list(carreiras_disponiveis),
+        index=None,
+        format_func=lambda identificador: (
+            carreiras_disponiveis[identificador]
+        ),
+        placeholder="Selecione uma das carreiras recomendadas",
+        key="carreira_roadmap",
+        on_change=mudar_carreira_roadmap
+    )
+
+    if carreira_escolhida:
+        st.markdown("### Avaliação das suas competências")
+        st.caption(
+            "Informe seu conhecimento atual em cada habilidade. "
+            "Utilize a escala de 0 a 5, sendo 0 nenhum conhecimento "
+            "e 5 domínio elevado."
+        )
+
+        requisitos = base["requisitos_junior"][carreira_escolhida]
+        catalogo = base["competencias"]
+
+        if "conhecimentos_roadmap" not in st.session_state:
+            st.session_state["conhecimentos_roadmap"] = {}
+
+        conhecimentos = st.session_state["conhecimentos_roadmap"]
+
+        for competencia_id, nivel_junior in requisitos.items():
+            chave = f"_conhecimento_{competencia_id}"
+
+            # Restaura a resposta salva; None significa não respondido.
+            st.session_state[chave] = conhecimentos.get(competencia_id)
+
+            st.selectbox(
+                label=catalogo[competencia_id],
+                options=list(range(6)),
+                index=None,
+                format_func=lambda valor: f"Nível {valor} de 5",
+                placeholder="Selecione seu nível atual",
+                key=chave,
+                on_change=salvar_conhecimento,
+                args=(competencia_id,)
+            )
+
+            st.caption(f"Nível de referência Júnior: {nivel_junior} de 5")
+
+        respondidas = sum(
+            conhecimentos.get(competencia_id) is not None
+            for competencia_id in requisitos
+        )
+
+        st.markdown(
+            f"**Competências avaliadas: {respondidas} "
+            f"de {len(requisitos)}**"
+        )
+
+        if respondidas == len(requisitos):
+            st.success(
+                "Todas as competências foram avaliadas! "
+                "Seu perfil está preparado para a análise de lacunas."
+            )
+
+        st.button(
+            "Gerar meu Roadmap",
+            key="wizard_gerar_roadmap",
+            on_click=gerar_roadmap,
+            use_container_width=True,
+            disabled=respondidas != len(requisitos)
+        )
+
+        # Só mostra o roadmap da carreira atualmente selecionada.
+        plano_gerado = st.session_state.get("resultado_roadmap")
+
+        if plano_gerado and plano_gerado["carreira_id"] == carreira_escolhida:
+            st.divider()
+            st.markdown(
+                '<div id="resultado-roadmap"></div>',
+                unsafe_allow_html=True
+            )
+            st.subheader("Seu Roadmap Personalizado")
+            st.write(plano_gerado["mensagem"])
+
+            coluna_cobertura, coluna_lacunas = st.columns(2)
+            with coluna_cobertura:
+                st.metric(
+                    "Cobertura dos requisitos Júnior",
+                    f"{plano_gerado['cobertura_percentual']:.2f}%"
+                )
+            with coluna_lacunas:
+                st.metric(
+                    "Lacunas identificadas",
+                    plano_gerado["total_lacunas"]
+                )
+
+            st.markdown("### Plano de estudos prioritário")
+            if plano_gerado["etapas_estudo"]:
+                for item in plano_gerado["etapas_estudo"]:
+                    st.markdown(
+                        f"**{item['prioridade']}º — "
+                        f"{item['competencia']} (Gap {item['gap']})**"
+                    )
+                    st.caption(
+                        f"Seu nível: {item['nivel_atual']}/5 | "
+                        f"Referência Júnior: {item['nivel_junior']}/5"
+                    )
+                    for conteudo in item["conteudos"]:
+                        st.markdown(f"- {conteudo}")
+            else:
+                st.success(
+                    "Nenhuma lacuna identificada segundo os níveis "
+                    "de referência informados na base de conhecimento."
+                )
+
+            st.markdown("### Certificações sugeridas")
+            if plano_gerado["certificacoes"]:
+                for certificacao in plano_gerado["certificacoes"]:
+                    st.markdown(f"**{certificacao['nome']}**")
+                    st.caption(
+                        "Relacionada às lacunas em: "
+                        + ", ".join(certificacao["competencias_relacionadas"])
+                    )
+                    st.caption(certificacao["orientacao"])
+            else:
+                st.info(
+                    "Não há certificações vinculadas às lacunas "
+                    "identificadas. Isso não impede o desenvolvimento "
+                    "do seu portfólio."
+                )
+
+            st.markdown("### Projeto para o portfólio GitHub")
+            projeto = plano_gerado["projeto_portfolio"]
+            st.markdown(f"**{projeto['titulo']}**")
+            st.write(projeto["descricao"])
+
+            if projeto["competencias_prioritarias"]:
+                st.markdown("**Competências a priorizar no projeto:**")
+                for competencia in projeto["competencias_prioritarias"]:
+                    st.markdown(f"- {competencia}")
+
+            st.caption(projeto["orientacao"])
+            st.caption(
+                "As referências Júnior são critérios acadêmicos. "
+                "As certificações são sugestões opcionais e podem "
+                "exigir conhecimentos adicionais."
+            )
+
+            if st.session_state.pop("rolar_para_roadmap", False):
+                st.html(
+                    """
+                    <script>
+                        setTimeout(() => {
+                            const alvo = document.getElementById(
+                                "resultado-roadmap"
+                            );
+                            if (alvo) {
+                                alvo.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "start"
+                                });
+                            }
+                        }, 250);
+                    </script>
+                    """,
+                    unsafe_allow_javascript=True
+                )
+
+    # --------------------------------------------------------
+    # ROLAGEM AUTOMÁTICA
+    # --------------------------------------------------------
+
     if st.session_state.pop("rolar_para_resultado", False):
+
         st.html(
             """
             <script>
@@ -441,7 +831,7 @@ if "resultado" in st.session_state:
 
                     function rolarParaResultado() {
                         const alvo = document.getElementById(
-                            "resultado-carreira"
+                            "resultado-ponderado"
                         );
 
                         if (alvo) {
@@ -454,13 +844,16 @@ if "resultado" in st.session_state:
                         }
                     }
 
-                    setTimeout(rolarParaResultado, 200);
+                    setTimeout(rolarParaResultado, 250);
                 })();
             </script>
             """,
             unsafe_allow_javascript=True
         )
 
+# ============================================================
+# RODAPÉ
+# ============================================================
 
 st.divider()
 
@@ -468,13 +861,12 @@ st.markdown(
     """
     <p style="
         text-align: center;
-        color: #b9d4e5;
+        color: #8d9ba9;
         font-size: 0.85rem;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
     ">
-        Consultor Inteligente de Carreiras em TI
-        • Sistema Especialista baseado em Regras
-        • Python + Experta + Streamlit
+        Sistema especialista acadêmico para orientação
+        de carreiras em Tecnologia da Informação.
     </p>
     """,
     unsafe_allow_html=True
