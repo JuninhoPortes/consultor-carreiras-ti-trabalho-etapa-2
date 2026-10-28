@@ -4,7 +4,11 @@
     "versao": "2.0.0",
     "descricao": "Base de conhecimento para avaliação ponderada de afinidades profissionais."
   },
-  "escalas": {
+  "criterios_diagnostico": {
+  "compatibilidade_minima": 55,
+  "diferenca_maxima_multifacetado": 10
+},
+"escalas": {
     "afinidade": {
       "minimo": 1,
       "maximo": 5,

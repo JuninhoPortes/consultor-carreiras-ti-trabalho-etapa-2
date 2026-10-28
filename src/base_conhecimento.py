@@ -25,10 +25,30 @@ def validar_base_conhecimento(base: dict) -> None:
         "metadados", "escalas", "dimensoes",
         "perguntas_afinidade", "carreiras",
         "regras_ponderadas", "competencias",
-        "requisitos_junior", "roadmaps"
+        "requisitos_junior", "roadmaps",
+        "criterios_diagnostico"
     }
 
     exigir(campos <= base.keys(), "existem seções obrigatórias ausentes")
+
+        # Critérios para diagnóstico de ambiguidade.
+    criterios = base["criterios_diagnostico"]
+
+    exigir(
+        isinstance(criterios, dict),
+        "critérios de diagnóstico inválidos"
+    )
+
+    for campo in (
+        "compatibilidade_minima",
+        "diferenca_maxima_multifacetado"
+    ):
+        valor = criterios.get(campo)
+
+        exigir(
+            type(valor) in (int, float) and 0 <= valor <= 100,
+            f"critério inválido: {campo}"
+        )
 
     dimensoes = base["dimensoes"]
     perguntas = base["perguntas_afinidade"]
