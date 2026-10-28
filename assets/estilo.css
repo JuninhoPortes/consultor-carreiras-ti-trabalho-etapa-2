@@ -338,3 +338,86 @@
 #resultado-carreira {
     scroll-margin-top: 24px;
 }
+
+
+/* ==========================================================
+   NAVEGAÇÃO DO QUESTIONÁRIO AVANÇADO
+   ========================================================== */
+
+.st-key-wizard_proximo button,
+.st-key-wizard_voltar button,
+.st-key-wizard_reiniciar button {
+    background: #081421 !important;
+    color: #ffd166 !important;
+    border: 1px solid rgba(255, 209, 102, 0.55) !important;
+    border-radius: 12px !important;
+    min-height: 3rem;
+    font-weight: 700 !important;
+    transition: all 0.3s ease;
+}
+
+.st-key-wizard_proximo button:hover,
+.st-key-wizard_voltar button:hover,
+.st-key-wizard_reiniciar button:hover {
+    background: #0d1c2b !important;
+    color: #ffe29a !important;
+    border-color: #ffd166 !important;
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.2);
+}
+
+.st-key-wizard_proximo button p,
+.st-key-wizard_voltar button p,
+.st-key-wizard_reiniciar button p {
+    color: #ffd166 !important;
+    font-weight: 700 !important;
+}
+
+
+/* Botão de análise profissional */
+
+.st-key-wizard_analisar button {
+    background: #081421 !important;
+    color: #ffd166 !important;
+    border: 1px solid rgba(255, 209, 102, 0.55) !important;
+    border-radius: 12px !important;
+    min-height: 3rem;
+    font-weight: 700 !important;
+    transition: all 0.3s ease;
+}
+
+.st-key-wizard_analisar button:hover {
+    background: #0d1c2b !important;
+    color: #ffe29a !important;
+    border-color: #ffd166 !important;
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.2);
+}
+
+.st-key-wizard_analisar button p {
+    color: #ffd166 !important;
+    font-weight: 700 !important;
+}
+
+
+/* Botão de geração do Roadmap Personalizado */
+
+.st-key-wizard_gerar_roadmap button {
+    background: #081421 !important;
+    color: #ffd166 !important;
+    border: 1px solid rgba(255, 209, 102, 0.55) !important;
+    border-radius: 12px !important;
+    min-height: 3rem;
+    font-weight: 700 !important;
+    transition: all 0.3s ease;
+}
+
+.st-key-wizard_gerar_roadmap button:hover {
+    background: #0d1c2b !important;
+    color: #ffe29a !important;
+    border-color: #ffd166 !important;
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.2);
+}
+
+.st-key-wizard_gerar_roadmap button p {
+    color: #ffd166 !important;
+    font-weight: 700 !important;
+}
