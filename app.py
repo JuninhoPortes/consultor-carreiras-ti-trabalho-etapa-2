@@ -4,6 +4,7 @@
 from pathlib import Path
 
 import streamlit as st
+import altair as alt
 
 from src.base_conhecimento import carregar_base_conhecimento
 from src.motor_ponderado import MotorPonderado
@@ -604,15 +605,35 @@ if etapa == 2 and "resultado_ponderado" in st.session_state:
         for carreira in resultado["ranking"]
     ]
 
-    st.bar_chart(
-        dados_grafico,
-        x="Carreira",
-        y="Compatibilidade (%)",
-        horizontal=True,
-        sort=False,
-        color="#37E8FF",
-        height=480
+    grafico = (
+        alt.Chart(alt.Data(values=dados_grafico))
+        .mark_bar(color="#37E8FF")
+        .encode(
+            x=alt.X(
+                "Compatibilidade (%):Q",
+                scale=alt.Scale(domain=[0, 100]),
+                title="Compatibilidade (%)"
+            ),
+            y=alt.Y(
+                "Carreira:N",
+                sort=[item["Carreira"] for item in dados_grafico],
+                title=None,
+                axis=alt.Axis(labelLimit=180)
+            ),
+            tooltip=[
+                alt.Tooltip("Carreira:N", title="Carreira"),
+                alt.Tooltip(
+                    "Compatibilidade (%):Q",
+                    title="Compatibilidade (%)",
+                    format=".2f"
+                )
+            ]
+        )
+        .properties(height=480)
     )
+
+    st.altair_chart(grafico, use_container_width=True)
+
 
     st.markdown(
         """

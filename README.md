@@ -174,7 +174,7 @@ O terminal exibirá o endereço local da interface, normalmente `http://localhos
 
 ## 10. Testes e validação
 
-Execute a suíte de testes automatizados:
+Execute a suíte completa de testes automatizados:
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -186,9 +186,16 @@ Também é possível verificar a integridade das dependências instaladas:
 python -m pip check
 ```
 
-**Status da validação local desta etapa:** 54 testes automatizados aprovados, conforme execução realizada durante o desenvolvimento.
+**Status da validação final:** 61 testes automatizados aprovados, incluindo sete testes adicionais de robustez e casos-limite implementados na Fase 5.
 
-Os testes contemplam carregamento e integridade da base, cálculo ponderado, regras de ajuste, classificação de perfis, casos ambíguos, análise de competências e geração de roadmaps. O fluxo visual foi validado manualmente, incluindo navegação, persistência das respostas, gráfico, seleção de carreira e geração do roadmap.
+Os testes contemplam o carregamento e a integridade da base de conhecimento, o cálculo de compatibilidade ponderada, a aplicação de regras de bônus e penalidade, a classificação dos perfis profissionais, o tratamento de entradas inválidas, a análise de lacunas de competências e a geração de roadmaps personalizados.
+
+A validação de robustez também abrange cenários de ambiguidade, empates entre carreiras, valores-limite dos critérios de classificação, afinidades mínimas e máximas e integração entre o mecanismo de recomendação e a geração do plano de desenvolvimento.
+
+Além dos testes automatizados, o fluxo visual foi validado manualmente, incluindo a navegação entre as etapas do questionário, a persistência das respostas, a apresentação do gráfico de compatibilidade na escala de 0% a 100%, a seleção da carreira recomendada e a geração do roadmap.
+
+Os cenários adicionais e os critérios de validação estão documentados em `docs/validacao_robustez.md`.
+
 
 ## 11. Estrutura principal do projeto
 
