@@ -226,6 +226,7 @@ Os detalhes de modelagem, implementação e validação estão documentados em:
 - `docs/motor_ponderado.md` — pontuação, regras, ranking e diagnóstico;
 - `docs/skill_gaps_roadmap.md` — avaliação de competências e geração do plano de desenvolvimento;
 - `docs/interface_streamlit_avancada.md` — questionário, apresentação dos resultados e gerenciamento de estado.
+- `docs/validacao_robustez.md` — cenários de robustez, valores-limite e validação final dos testes.
 
 O repositório também preserva a documentação das etapas e da versão AECO que originou este trabalho.
 
