@@ -18,7 +18,7 @@ Os resultados de compatibilidade permanecem limitados ao intervalo de **0% a 100
 
 ## 3. Novos cenários automatizados
 
-Os sete casos abaixo estão implementados em `tests/test_robustez_fase5.py`.
+Os sete casos abaixo estão implementados em `tests/test_robustez.py`.
 
 | Teste | Entrada / condição | Comportamento esperado |
 |---|---|---|
@@ -37,7 +37,7 @@ Os sete casos abaixo estão implementados em `tests/test_robustez_fase5.py`.
 Na raiz do projeto, com as dependências instaladas, executar:
 
 ```powershell
-python -m unittest discover -s tests -p "test_robustez_fase5.py" -v
+python -m unittest discover -s tests -p "test_robustez.py" -v
 ```
 
 Para verificar toda a aplicação:
